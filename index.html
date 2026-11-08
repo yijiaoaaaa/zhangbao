@@ -1395,7 +1395,7 @@
     history.push({role:'user', content:'想买「' + name + '」，' + price + ' 元，预期用 ' + years + ' 年' +
       (extra ? '，另外觉得它能带来：' + extra : '') + '。系统估分 ' + res.score + '，折合每天 ' + res.daily + ' 元。'});
     if(history.length > 16) history = history.slice(-16);
-    reply('（内部）用两句话接着上一张估值卡片给个判断，不要重复卡片里的数字，不要开场客套，不要说「记下了」「收到」。');
+    reply('（内部）用户在上一张卡片里刚看过逐年价值和综合分。用两句话把判断说清楚：什么情况下值、什么情况下不值；价格、年限、每天成本这些卡片已有的数字不要再重复，也不要开场客套。');
   };
 
   renderProfileBtn();
