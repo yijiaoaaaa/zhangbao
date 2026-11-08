@@ -347,6 +347,46 @@
   .dots i:nth-child(2){animation-delay:.18s;}
   .dots i:nth-child(3){animation-delay:.36s;}
   @keyframes blink{0%,70%,100%{opacity:.25;}35%{opacity:1;}}
+
+  /* 快捷功能 */
+  .quickbar{flex:none;display:flex;gap:10px;padding:0 2px 10px;flex-wrap:wrap;}
+  .qbtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;border:1px solid #e2e9f4;
+    background:#fff;border-radius:13px;padding:8px 14px;cursor:pointer;transition:.18s;text-align:left;font-family:inherit;}
+  .qbtn b{font-size:13.5px;color:#1c2c4a;font-weight:600;}
+  .qbtn span{font-size:11.5px;color:#8b98ad;}
+  .qbtn:hover{border-color:#c3d6f2;box-shadow:0 8px 20px rgba(47,95,208,.10);transform:translateY(-1px);}
+  .qbtn.done{border-color:#c9def8;background:linear-gradient(145deg,#f5f9ff,#e9f1ff);}
+  .qbtn.done b{color:#2f5fd0;}
+
+  .modal{position:fixed;inset:0;background:rgba(15,26,45,.42);display:none;align-items:center;
+    justify-content:center;z-index:200;padding:24px;}
+  .modal.on{display:flex;}
+  .mcard{width:100%;max-width:470px;max-height:88vh;overflow:auto;background:#fff;border-radius:20px;
+    padding:26px 26px 20px;box-shadow:0 30px 80px rgba(15,26,45,.28);animation:pop .26s cubic-bezier(.2,.8,.3,1) both;}
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+  .mcard h3{font-size:18px;color:#13233f;margin:0 0 6px;font-weight:700;}
+  .mhint{font-size:12.5px;color:#8b98ad;line-height:1.75;margin:0 0 16px;}
+  .mrow{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .mrow label{width:104px;flex:none;font-size:13px;color:#4a5a72;}
+  .mrow input,.mrow select,.mcard textarea{flex:1;border:1px solid #e2e9f4;border-radius:10px;padding:9px 11px;
+    font-size:13.5px;color:#1c2c4a;outline:none;font-family:inherit;background:#fbfcfe;min-width:0;}
+  .mrow input:focus,.mrow select:focus,.mcard textarea:focus{border-color:#b9cff0;background:#fff;}
+  .mrow .pct{width:14px;flex:none;color:#8b98ad;font-size:13px;}
+  .mcard textarea{width:100%;resize:none;height:66px;line-height:1.65;}
+  .mfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;}
+  .mfoot .sum{font-size:12.5px;color:#8b98ad;}
+  .mfoot .sum.bad{color:#d1495b;}
+  .mbtn{border:0;border-radius:12px;padding:10px 22px;font-size:13.5px;color:#fff;cursor:pointer;
+    background:linear-gradient(145deg,#2f5fd0,#2749a6);font-family:inherit;}
+  .mbtn:disabled{opacity:.5;cursor:default;}
+
+  .valcard{border:1px solid #e6edf7;border-radius:14px;padding:14px 16px;background:#fbfdff;}
+  .vhead{font-size:13px;color:#1c2c4a;font-weight:600;margin-bottom:10px;}
+  .vgrid{display:grid;grid-template-columns:58px 1fr 1fr 1fr;gap:7px 12px;font-size:12px;color:#44546c;}
+  .vgrid .vh{color:#93a0b4;font-size:11.5px;}
+  .vcell{position:relative;padding:2px 0 5px;}
+  .vcell i{position:absolute;left:0;bottom:0;height:2px;border-radius:2px;background:#2f5fd0;opacity:.5;}
+  .vfoot{margin-top:11px;font-size:12.5px;color:#3d4d66;border-top:1px dashed #e6edf7;padding-top:10px;line-height:1.75;}
 </style>
 </head>
 <body>
@@ -875,6 +915,10 @@
           <button class="chip">哪一块花超了</button>
         </div>
       </div>
+      <div class="quickbar an" style="--d:.18s">
+        <button class="qbtn" id="qProfile"><b>建档</b><span id="qProfileTxt">年级 · 生活费 · 四项占比</span></button>
+        <button class="qbtn" id="qVal"><b>值不值</b><span>估一件东西这几年的价值</span></button>
+      </div>
       <div class="composer2 an" style="--d:.22s">
         <textarea id="entry" rows="1" placeholder="输入你想记录的内容，例如：今天吃饭花了 35 元 …"></textarea>
         <button id="sendBtn">发送</button>
@@ -883,6 +927,54 @@
     </div>
   </div>
 </section>
+
+<!-- 建档 -->
+<div class="modal" id="mProfile">
+  <div class="mcard">
+    <h3>先给账宝一个底子</h3>
+    <p class="mhint">这几项只存在你自己的浏览器里，用来判断一笔花销在这个月算不算多。填完之后，记账和估值都按它来算。</p>
+    <div class="mrow"><label>现在读几年级</label>
+      <select id="pfGrade">
+        <option>大一</option><option>大二</option><option>大三</option><option>大四</option><option>研究生</option>
+      </select>
+    </div>
+    <div class="mrow"><label>每月生活费</label>
+      <input id="pfMoney" type="number" min="0" step="50" placeholder="1600"><span class="pct">元</span>
+    </div>
+    <div class="mrow"><label>餐饮占比</label><input id="pfFood" type="number" min="0" max="100" value="50"><span class="pct">%</span></div>
+    <div class="mrow"><label>娱乐占比</label><input id="pfFun" type="number" min="0" max="100" value="15"><span class="pct">%</span></div>
+    <div class="mrow"><label>学习占比</label><input id="pfStudy" type="number" min="0" max="100" value="15"><span class="pct">%</span></div>
+    <div class="mrow"><label>其他占比</label><input id="pfOther" type="number" min="0" max="100" value="20"><span class="pct">%</span></div>
+    <div class="mfoot">
+      <span class="sum" id="pfSum">四项合计 100%</span>
+      <span style="display:flex;gap:10px">
+        <button class="mbtn" id="pfCancel" style="background:#eef2f8;color:#5a6b85">取消</button>
+        <button class="mbtn" id="pfSave">存下</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- 值不值 -->
+<div class="modal" id="mVal">
+  <div class="mcard">
+    <h3>这件东西值不值</h3>
+    <p class="mhint">填四栏，账宝按你剩下的在校年数，把它的交换价值、情绪价值和使用价值逐年算给你看。</p>
+    <div class="mrow"><label>商品名称</label><input id="vName" placeholder="比如 降噪耳机"></div>
+    <div class="mrow"><label>价格</label><input id="vPrice" type="number" min="0" placeholder="899"><span class="pct">元</span></div>
+    <div class="mrow"><label>预期用几年</label><input id="vYears" type="number" min="0.5" step="0.5" placeholder="3"><span class="pct">年</span></div>
+    <div class="mrow" style="align-items:flex-start"><label style="padding-top:8px">你还觉得它<br>带来什么</label>
+      <textarea id="vExtra" placeholder="比如 通勤路上能安静一会儿，跑步也不吵"></textarea>
+    </div>
+    <div class="mfoot">
+      <span class="sum" id="vTip">按建档里的年级算在校年限</span>
+      <span style="display:flex;gap:10px">
+        <button class="mbtn" id="vCancel" style="background:#eef2f8;color:#5a6b85">取消</button>
+        <button class="mbtn" id="vGo">开始估算</button>
+      </span>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -1057,6 +1149,8 @@
 
   // 本地兜底回复：没有后端时也能演示
   function localReply(text){
+    if(text.indexOf('（内部）') === 0)
+      return '值不值主要看用得多不多：用得频就摊得薄，用得少只是买了个心安。';
     var m = text.match(/(\d+(?:\.\d+)?)\s*元/);
     var amt = m ? m[1] : null;
     if(/吃|饭|奶茶|外卖|食堂/.test(text) && amt)
@@ -1128,11 +1222,183 @@
   function send(){
     var v = entryEl.value.trim();
     if(!v) return;
+    if(!profile){
+      push(v, true);
+      entryEl.value = '';
+      entryEl.style.height = 'auto';
+      needProfile('记账分类');
+      return;
+    }
     push(v, true);
     entryEl.value = '';
     entryEl.style.height = 'auto';
     reply(v);
   }
+
+  /* ---------- 快捷功能：建档 ---------- */
+  var PF_KEY = 'zb_profile_v1';
+  var profile = null;
+  try{ profile = JSON.parse(localStorage.getItem(PF_KEY) || 'null'); }catch(e){ profile = null; }
+  var REMAIN = {'大一':4,'大二':3,'大三':2,'大四':1,'研究生':2};
+  var YEARS_LABEL = {
+    '大一':['大一','大二','大三','大四'],
+    '大二':['大二','大三','大四','毕业'],
+    '大三':['大三','大四','毕业'],
+    '大四':['大四','毕业'],
+    '研究生':['研一','研二']
+  };
+
+  var mProfile = document.getElementById('mProfile');
+  var mVal = document.getElementById('mVal');
+  var fGrade = document.getElementById('pfGrade');
+  var fMoney = document.getElementById('pfMoney');
+  var fFood = document.getElementById('pfFood');
+  var fFun = document.getElementById('pfFun');
+  var fStudy = document.getElementById('pfStudy');
+  var fOther = document.getElementById('pfOther');
+  var pfSum = document.getElementById('pfSum');
+  var pfSave = document.getElementById('pfSave');
+
+  function pct(v){ var n = parseInt(v, 10); return isNaN(n) ? 0 : n; }
+  function sumPct(){ return pct(fFood.value) + pct(fFun.value) + pct(fStudy.value) + pct(fOther.value); }
+
+  function paintSum(){
+    var s = sumPct();
+    pfSum.textContent = s === 100 ? '四项合计 100%' : '四项合计 ' + s + '%，要正好 100%';
+    pfSum.className = 'sum' + (s === 100 ? '' : ' bad');
+    pfSave.disabled = !(s === 100 && parseFloat(fMoney.value) > 0);
+  }
+  [fFood, fFun, fStudy, fOther, fMoney].forEach(function(el){
+    el.addEventListener('input', paintSum);
+  });
+
+  function renderProfileBtn(){
+    var btn = document.getElementById('qProfile');
+    var txt = document.getElementById('qProfileTxt');
+    if(profile){
+      btn.classList.add('done');
+      btn.querySelector('b').textContent = '已建档';
+      txt.textContent = profile.grade + ' · 每月 ' + profile.money + ' 元 · 餐' + profile.food +
+        '% 娱' + profile.fun + '% 学' + profile.study + '% 他' + profile.other + '%';
+    } else {
+      btn.classList.remove('done');
+      btn.querySelector('b').textContent = '建档';
+      txt.textContent = '年级 · 生活费 · 四项占比';
+    }
+  }
+
+  function openProfile(){
+    if(profile){
+      fGrade.value = profile.grade;
+      fMoney.value = profile.money;
+      fFood.value = profile.food; fFun.value = profile.fun;
+      fStudy.value = profile.study; fOther.value = profile.other;
+    }
+    paintSum();
+    mProfile.classList.add('on');
+    setTimeout(function(){ fMoney.focus(); }, 80);
+  }
+
+  document.getElementById('qProfile').onclick = openProfile;
+  document.getElementById('pfCancel').onclick = function(){ mProfile.classList.remove('on'); };
+  pfSave.onclick = function(){
+    if(sumPct() !== 100 || !(parseFloat(fMoney.value) > 0)) return;
+    profile = {
+      grade: fGrade.value,
+      money: parseFloat(fMoney.value),
+      food: pct(fFood.value), fun: pct(fFun.value),
+      study: pct(fStudy.value), other: pct(fOther.value)
+    };
+    try{ localStorage.setItem(PF_KEY, JSON.stringify(profile)); }catch(e){}
+    renderProfileBtn();
+    mProfile.classList.remove('on');
+    push('底子存好了：' + profile.grade + '，每月 ' + profile.money + ' 元，餐饮这一项 ' +
+      Math.round(profile.money * profile.food / 100) + ' 元。之后每笔花销都按这个盘子算。');
+  };
+
+  function needProfile(what){
+    push('先花二十秒建档——年级、每月生活费、四项占比。这三样不定，' + what + '没有参照。');
+    openProfile();
+  }
+
+  /* ---------- 快捷功能：值不值 ---------- */
+  var vName = document.getElementById('vName');
+  var vPrice = document.getElementById('vPrice');
+  var vYears = document.getElementById('vYears');
+  var vExtra = document.getElementById('vExtra');
+  var vTip = document.getElementById('vTip');
+
+  document.getElementById('qVal').onclick = function(){
+    if(!profile){ needProfile('估值'); return; }
+    vTip.textContent = '在校还剩 ' + REMAIN[profile.grade] + ' 年，按这个算';
+    mVal.classList.add('on');
+    setTimeout(function(){ vName.focus(); }, 80);
+  };
+  document.getElementById('vCancel').onclick = function(){ mVal.classList.remove('on'); };
+
+  function vbar(v){ return '<div class="vcell">' + v + '<i style="width:' + v + '%"></i></div>'; }
+
+  function estimate(price, years, extra){
+    var remain = REMAIN[profile.grade] || 4;
+    var labels = (YEARS_LABEL[profile.grade] || ['大一','大二','大三','大四']).slice();
+    var n = Math.max(1, Math.min(Math.round(years), remain));
+    while(labels.length < n) labels.push('之后');
+    var boost = Math.min(14, extra.length * 0.8);
+    var heavy = price > profile.money * 0.5 ? 0.92 : 1;
+    var rows = [], i;
+    for(i = 0; i < n; i++){
+      rows.push({
+        u: Math.round(Math.max(26, 100 - 15 * i) * heavy),
+        ex: Math.round(Math.max(6, 64 - 17 * i)),
+        em: Math.round(Math.min(100, 46 + 54 * Math.exp(-0.62 * i) + boost))
+      });
+    }
+    var su = 0, se = 0, sm = 0;
+    rows.forEach(function(r){ su += r.u; se += r.ex; sm += r.em; });
+    su /= n; se /= n; sm /= n;
+    var score = Math.round(0.4 * su + 0.3 * sm + 0.3 * se);
+    var daily = (price / (n * 365)).toFixed(2);
+    var verdict;
+    if(score >= 72){
+      verdict = '综合 ' + score + ' 分，折合每天 ' + daily + ' 元。用得上的话这笔钱摊得很薄，值。';
+    } else if(score >= 58){
+      verdict = '综合 ' + score + ' 分，折合每天 ' + daily + ' 元。不算贵，值不值全看使用频率——一周用不到两次就该再想想。';
+    } else {
+      verdict = '综合 ' + score + ' 分，折合每天 ' + daily + ' 元。情绪价值撑不起这个价格，先放两周看还想不想要。';
+    }
+    return {rows: rows, labels: labels, score: score, daily: daily, verdict: verdict};
+  }
+
+  document.getElementById('vGo').onclick = function(){
+    var name = (vName.value || '').trim();
+    var price = parseFloat(vPrice.value);
+    var years = parseFloat(vYears.value);
+    if(!name || !(price > 0) || !(years > 0)){
+      vTip.textContent = '名称、价格、年限都要填';
+      return;
+    }
+    var extra = (vExtra.value || '').trim();
+    mVal.classList.remove('on');
+    var res = estimate(price, years, extra);
+    var rows = res.rows.map(function(r, i){
+      return '<div>' + res.labels[i] + '</div>' + vbar(r.u) + vbar(r.ex) + vbar(r.em);
+    }).join('');
+    var d = document.createElement('div');
+    d.className = 'msg bot';
+    d.innerHTML = '<span class="who">账宝</span><div class="valcard">' +
+      '<div class="vhead">' + name + ' · ' + price + ' 元 · 计划用 ' + years + ' 年</div>' +
+      '<div class="vgrid"><div class="vh">学年</div><div class="vh">使用价值</div>' +
+      '<div class="vh">交换价值</div><div class="vh">情绪价值</div>' + rows + '</div>' +
+      '<div class="vfoot">' + res.verdict + '</div></div>';
+    msgList.appendChild(d);
+    scrollDown();
+    history.push({role:'user', content:'想买「' + name + '」，' + price + ' 元，预期用 ' + years + ' 年' +
+      (extra ? '，另外觉得它能带来：' + extra : '') + '。系统估分 ' + res.score + '，折合每天 ' + res.daily + ' 元。'});
+    if(history.length > 16) history = history.slice(-16);
+    reply('（内部）用两句话接着上一张估值卡片给个判断，不要重复卡片里的数字，不要开场客套，不要说「记下了」「收到」。');
+  };
+
+  renderProfileBtn();
 
   sendBtn.onclick = send;
   entryEl.addEventListener('keydown', function(e){
