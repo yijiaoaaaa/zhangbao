@@ -1,0 +1,9 @@
+﻿.pptsrc/
+.pptx/
+shots/
+tmp/
+.shot.py
+_xls/
+.env*.local
+.env
+api/chat.js.bak
