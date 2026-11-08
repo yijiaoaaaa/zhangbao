@@ -6,4 +6,3 @@ tmp/
 _xls/
 .env*.local
 .env
-api/chat.js.bak
