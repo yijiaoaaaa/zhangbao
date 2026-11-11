@@ -5,8 +5,8 @@ import re
 import docx
 
 HERE = r"F:\LCY\大学生理财"
-DOC = r"F:\LCY\「账宝」大学生消费前瞻预测项目计划书(1).docx"
-MAX_P = 2  # 每个二级标题下最多取几段
+DOC = r"F:\LCY\「账宝」项目计划书（公文格式·蓝底封面）.docx"
+MAX_P = 99  # 每个二级标题下最多取几段
 MAX_REF = 60  # 参考文献章最多保留几条
 
 
@@ -22,7 +22,12 @@ for para in d.paragraphs:
     t = para.text.strip()
     if not t:
         continue
+    if "□" in t:
+        t = re.sub(r"□(?=\S)", "□ ", t)
+    t = re.sub(r"^(附录[A-C])(?=\S)", r"\1 ", t)
     st = para.style.name
+    if st.startswith("目录") or st in ("表题", "图题", "插图"):
+        continue
     if st == "Heading 1":
         blocks.append(("h1", t))
         buf = -1
@@ -143,7 +148,7 @@ open(os.path.join(HERE, "_plan_block.html"), "w", encoding="utf-8").write(frag)
 p = os.path.join(HERE, "index.html")
 html = open(p, encoding="utf-8").read()
 start = html.index('<!-- ============ 计划书 ============ -->')
-end = html.index('<!-- ============ 工作台 ============ -->')
+end = html.index('<!-- ============ 工作台（AI 对话） ============ -->')
 html = html[:start] + '<!-- ============ 计划书 ============ -->\n' + frag + "\n\n" + html[end:]
 open(p, "w", encoding="utf-8", newline="\n").write(html)
 print("chapters", len(chapters), "chars", len(frag))
