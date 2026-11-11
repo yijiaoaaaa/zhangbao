@@ -383,6 +383,15 @@
   .vcell{position:relative;padding:2px 0 5px;}
   .vcell i{position:absolute;left:0;bottom:0;height:2px;border-radius:2px;background:#2f5fd0;opacity:.5;}
   .vfoot{margin-top:11px;font-size:12.5px;color:#3d4d66;border-top:1px dashed #e6edf7;padding-top:10px;line-height:1.75;}
+  .vscore{display:flex;align-items:center;gap:13px;margin:0 0 12px;padding-bottom:12px;border-bottom:1px dashed #e6edf7;}
+  .vnum{font-size:30px;font-weight:800;line-height:1;color:#1b2f54;letter-spacing:-.01em;}
+  .vnum small{font-size:12.5px;font-weight:600;margin-left:1px;}
+  .vbar2{flex:1;height:8px;border-radius:99px;background:#e8eef8;overflow:hidden;}
+  .vbar2 i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#5a8be0,#1b2f54);}
+  .vtag{font-size:12px;font-weight:700;padding:4px 10px;border-radius:99px;white-space:nowrap;}
+  .vtag.ok{background:#e7f2ec;color:#1f6b46;}
+  .vtag.mid{background:#fdf2df;color:#8a5a12;}
+  .vtag.no{background:#fbe9e9;color:#8d2b2b;}
 </style>
 </head>
 <body>
@@ -1039,6 +1048,7 @@
     <h3>这件东西值不值</h3>
     <p class="mhint">填四栏，账宝按你剩下的在校年数，把它的交换价值、情绪价值和使用价值逐年算给你看。</p>
     <div class="mrow"><label>商品名称</label><input id="vName" placeholder="比如 降噪耳机"></div>
+    <div class="mrow"><label>品牌（选填）</label><input id="vBrand" placeholder="比如 索尼 / 小米"></div>
     <div class="mrow"><label>价格</label><input id="vPrice" type="number" min="0" placeholder="899"><span class="pct">元</span></div>
     <div class="mrow"><label>预期用几年</label><input id="vYears" type="number" min="0.5" step="0.5" placeholder="3"><span class="pct">年</span></div>
     <div class="mrow" style="align-items:flex-start"><label style="padding-top:8px">你还觉得它<br>带来什么</label>
@@ -1226,9 +1236,27 @@
   }
 
   // 本地兜底回复：没有后端时也能演示
+  var lastVal = null;
+
   function localReply(text){
-    if(text.indexOf('（内部）') === 0)
-      return '值不值主要看用得多不多：用得频就摊得薄，用得少只是买了个心安。';
+    if(text.indexOf('（内部）') === 0){
+      if(!lastVal) return '这件还没算过，先在「值不值」里填一遍。';
+      var v = lastVal;
+      var ratio = v.price / Math.max(1, profile ? profile.money : 1800);
+      var high = ratio > 0.45;
+      var s1 = (v.brand ? v.brand + ' ' : '') + v.name + ' 的价值落点在' +
+        (v.rows[0].em > v.rows[0].ex ? '体验和情绪收益' : '实际使用') + '上，不是转手能保值的硬资产。';
+      var s2 = high
+        ? '同类里它属于偏贵的一档：做工、用材与售后是它的强项，短板是溢价明显，同功能的低价替代品能覆盖七八成需求。'
+        : '同类里它属于中低价位：价格和够用是优势，短板在耐久度、细节做工与售后响应，坏一次往往就要换新。';
+      var s3 = '往后三年它会按每年一到两成的速度掉价，' + (high ? '而且新款一出，旧款的二手价会被压得更狠。' : '电池、接口、面料这类部件最先老化，维修不如重买划算。');
+      var s4 = v.tag === '值'
+        ? '结论：值，' + v.pct + '%，按这个价格和周期可以直接买。'
+        : v.tag === '有条件值'
+          ? '结论：' + v.pct + '%，只在你能用满周期时才成立，否则压到同类低价款更划算。'
+          : '结论：不值，' + v.pct + '%，同样的钱在同类里能买到更耐用的，先别下单。';
+      return s1 + s2 + s3 + s4;
+    }
     var m = text.match(/(\d+(?:\.\d+)?)\s*元/);
     var amt = m ? m[1] : null;
     if(/吃|饭|奶茶|外卖|食堂/.test(text) && amt)
@@ -1401,6 +1429,7 @@
 
   /* ---------- 快捷功能：值不值 ---------- */
   var vName = document.getElementById('vName');
+  var vBrand = document.getElementById('vBrand');
   var vPrice = document.getElementById('vPrice');
   var vYears = document.getElementById('vYears');
   var vExtra = document.getElementById('vExtra');
@@ -1421,34 +1450,41 @@
     var labels = (YEARS_LABEL[profile.grade] || ['大一','大二','大三','大四']).slice();
     var n = Math.max(1, Math.min(Math.round(years), remain));
     while(labels.length < n) labels.push('之后');
-    var boost = Math.min(14, extra.length * 0.8);
-    var heavy = price > profile.money * 0.5 ? 0.92 : 1;
+    var boost = Math.min(10, extra.length * 0.45);
+    // 价格占月生活费的比例越高压得越狠，这是收紧判定最主要的杠杆
+    var ratio = price / Math.max(1, profile.money);
+    var heavy = ratio > 1 ? 0.72 : ratio > 0.6 ? 0.80 : ratio > 0.35 ? 0.88 : ratio > 0.18 ? 0.95 : 1;
     var rows = [], i;
     for(i = 0; i < n; i++){
       rows.push({
-        u: Math.round(Math.max(26, 100 - 15 * i) * heavy),
-        ex: Math.round(Math.max(6, 64 - 17 * i)),
-        em: Math.round(Math.min(100, 46 + 54 * Math.exp(-0.62 * i) + boost))
+        u: Math.round(Math.max(18, 92 - 19 * i) * heavy),
+        ex: Math.round(Math.max(4, 56 - 21 * i) * heavy),
+        em: Math.round(Math.min(96, 40 + 48 * Math.exp(-0.78 * i) + boost))
       });
     }
     var su = 0, se = 0, sm = 0;
     rows.forEach(function(r){ su += r.u; se += r.ex; sm += r.em; });
     su /= n; se /= n; sm /= n;
-    var score = Math.round(0.4 * su + 0.3 * sm + 0.3 * se);
+    var raw = 0.38 * su + 0.30 * sm + 0.32 * se;
+    var pct = Math.max(8, Math.min(94, Math.round(raw)));
     var daily = (price / (n * 365)).toFixed(2);
-    var verdict;
-    if(score >= 72){
-      verdict = '综合 ' + score + ' 分，折合每天 ' + daily + ' 元。用得上的话这笔钱摊得很薄，值。';
-    } else if(score >= 58){
-      verdict = '综合 ' + score + ' 分，折合每天 ' + daily + ' 元。不算贵，值不值全看使用频率——一周用不到两次就该再想想。';
+    var tag, tagCls, verdict;
+    if(pct >= 78){
+      tag = '值'; tagCls = 'ok';
+      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元。这笔钱花得成立：单价压得住，往后几年也不会因为用旧就不值。';
+    } else if(pct >= 60){
+      tag = '有条件值'; tagCls = 'mid';
+      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元。卡在线上，问题不在贵，在你用不满它的周期。';
     } else {
-      verdict = '综合 ' + score + ' 分，折合每天 ' + daily + ' 元。情绪价值撑不起这个价格，先放两周看还想不想要。';
+      tag = '不值'; tagCls = 'no';
+      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元。按现在的价格和使用周期，这笔钱买不回等价的东西。';
     }
-    return {rows: rows, labels: labels, score: score, daily: daily, verdict: verdict};
+    return {rows: rows, labels: labels, pct: pct, daily: daily, verdict: verdict, tag: tag, tagCls: tagCls};
   }
 
   document.getElementById('vGo').onclick = function(){
     var name = (vName.value || '').trim();
+    var brand = (vBrand.value || '').trim();
     var price = parseFloat(vPrice.value);
     var years = parseFloat(vYears.value);
     if(!name || !(price > 0) || !(years > 0)){
@@ -1464,16 +1500,21 @@
     var d = document.createElement('div');
     d.className = 'msg bot';
     d.innerHTML = '<span class="who">账宝</span><div class="valcard">' +
-      '<div class="vhead">' + name + ' · ' + price + ' 元 · 计划用 ' + years + ' 年</div>' +
+      '<div class="vscore"><span class="vnum">' + res.pct + '<small>%</small></span>' +
+      '<span class="vbar2"><i style="width:' + res.pct + '%"></i></span>' +
+      '<span class="vtag ' + res.tagCls + '">' + res.tag + '</span></div>' +
+      '<div class="vhead">' + (brand ? brand + ' ' : '') + name + ' · ' + price + ' 元 · 计划用 ' + years + ' 年</div>' +
       '<div class="vgrid"><div class="vh">学年</div><div class="vh">使用价值</div>' +
       '<div class="vh">交换价值</div><div class="vh">情绪价值</div>' + rows + '</div>' +
       '<div class="vfoot">' + res.verdict + '</div></div>';
     msgList.appendChild(d);
     scrollDown();
-    history.push({role:'user', content:'想买「' + name + '」，' + price + ' 元，预期用 ' + years + ' 年' +
-      (extra ? '，另外觉得它能带来：' + extra : '') + '。系统估分 ' + res.score + '，折合每天 ' + res.daily + ' 元。'});
+    lastVal = {brand: brand, name: name, price: price, years: years, extra: extra,
+               pct: res.pct, tag: res.tag, rows: res.rows, labels: res.labels, daily: res.daily};
+    history.push({role:'user', content:'想买' + (brand ? '「' + brand + '」' : '') + '「' + name + '」，' + price + ' 元，预期用 ' + years + ' 年' +
+      (extra ? '，另外觉得它能带来：' + extra : '') + '。系统判定值不值 ' + res.pct + '%，折合每天 ' + res.daily + ' 元。'});
     if(history.length > 16) history = history.slice(-16);
-    reply('（内部）用户在上一张卡片里刚看过逐年价值和综合分。用两句话把判断说清楚：什么情况下值、什么情况下不值；价格、年限、每天成本这些卡片已有的数字不要再重复，也不要开场客套。');
+    reply('（内部）用户在上一张卡片里已经看到百分比结论。不要含糊，不要出现「看情况」「用得多就值」这类话，直接给一段分析，讲四件事：这件东西本身的价值；和市面上同类比，它的优势与短板各是什么；往后几年会怎么损耗、贬值或变化；最后一句明确结论——到底值不值、如果要买该买哪个方向。价格、每天成本这些卡片上已有的数字不要再重复，不要开场客套，控制在四句话以内。');
   };
 
   renderProfileBtn();
