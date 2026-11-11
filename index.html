@@ -1246,15 +1246,17 @@
       var high = ratio > 0.45;
       var s1 = (v.brand ? v.brand + ' ' : '') + v.name + ' 的价值落点在' +
         (v.rows[0].em > v.rows[0].ex ? '体验和情绪收益' : '实际使用') + '上，不是转手能保值的硬资产。';
-      var s2 = high
-        ? '同类里它属于偏贵的一档：做工、用材与售后是它的强项，短板是溢价明显，同功能的低价替代品能覆盖七八成需求。'
-        : '同类里它属于中低价位：价格和够用是优势，短板在耐久度、细节做工与售后响应，坏一次往往就要换新。';
+      var s2 = ratio >= 1
+        ? '单件价格已经超过你一个月的生活费，同类里比它便宜一半的产品能覆盖七八成需求，多出来的部分是品牌与体验溢价。'
+        : high
+          ? '同类里它属于偏贵的一档：做工、用材与售后是它的强项，短板是溢价明显，同功能的低价替代品能覆盖七八成需求。'
+          : '同类里它属于中低价位：价格和够用是优势，短板在耐久度、细节做工与售后响应，坏一次往往就要换新。';
       var s3 = '往后三年它会按每年一到两成的速度掉价，' + (high ? '而且新款一出，旧款的二手价会被压得更狠。' : '电池、接口、面料这类部件最先老化，维修不如重买划算。');
       var s4 = v.tag === '值'
-        ? '结论：值，' + v.pct + '%，按这个价格和周期可以直接买。'
+        ? '结论：值，' + v.pct + '%，只占月生活费 ' + v.share + '%，按这个价格和周期可以直接买。'
         : v.tag === '有条件值'
-          ? '结论：' + v.pct + '%，只在你能用满周期时才成立，否则压到同类低价款更划算。'
-          : '结论：不值，' + v.pct + '%，同样的钱在同类里能买到更耐用的，先别下单。';
+          ? '结论：' + v.pct + '%，占月生活费 ' + v.share + '%，只在你能用满周期时才成立，否则压到同类低价款更划算。'
+          : '结论：不值，' + v.pct + '%，' + (ratio >= 1 ? '一件顶掉一整个月生活费，' : '占月生活费 ' + v.share + '%，') + '同样的钱在同类里能买到更耐用的，先别下单。';
       return s1 + s2 + s3 + s4;
     }
     var m = text.match(/(\d+(?:\.\d+)?)\s*元/);
@@ -1451,13 +1453,14 @@
     var n = Math.max(1, Math.min(Math.round(years), remain));
     while(labels.length < n) labels.push('之后');
     var boost = Math.min(10, extra.length * 0.45);
-    // 价格占月生活费的比例越高压得越狠，这是收紧判定最主要的杠杆
+    // 与建档生活费强挂钩：占比越高压得越狠，超过一个月生活费直接判死
     var ratio = price / Math.max(1, profile.money);
-    var heavy = ratio > 1 ? 0.72 : ratio > 0.6 ? 0.80 : ratio > 0.35 ? 0.88 : ratio > 0.18 ? 0.95 : 1;
+    var heavy = ratio >= 3 ? 0.34 : ratio >= 2 ? 0.44 : ratio >= 1.5 ? 0.52 : ratio >= 1 ? 0.60
+              : ratio >= 0.7 ? 0.68 : ratio >= 0.5 ? 0.76 : ratio >= 0.3 ? 0.85 : ratio >= 0.15 ? 0.93 : 1;
     var rows = [], i;
     for(i = 0; i < n; i++){
       rows.push({
-        u: Math.round(Math.max(18, 92 - 19 * i) * heavy),
+        u: Math.round(Math.max(16, 92 - 19 * i) * heavy),
         ex: Math.round(Math.max(4, 56 - 21 * i) * heavy),
         em: Math.round(Math.min(96, 40 + 48 * Math.exp(-0.78 * i) + boost))
       });
@@ -1466,20 +1469,28 @@
     rows.forEach(function(r){ su += r.u; se += r.ex; sm += r.em; });
     su /= n; se /= n; sm /= n;
     var raw = 0.38 * su + 0.30 * sm + 0.32 * se;
-    var pct = Math.max(8, Math.min(94, Math.round(raw)));
+    if(ratio >= 2) raw *= 0.66;
+    else if(ratio >= 1) raw *= 0.78;
+    var pct = Math.max(6, Math.min(94, Math.round(raw)));
     var daily = (price / (n * 365)).toFixed(2);
+    var share = Math.round(ratio * 100);
+    var shareTxt = ratio >= 1
+      ? '相当于 ' + (ratio).toFixed(1) + ' 个月的生活费'
+      : '占你月生活费的 ' + share + '%';
+    var shareShort = ratio >= 1 ? '≈' + (ratio).toFixed(1) + ' 个月生活费' : '占月生活费 ' + share + '%';
     var tag, tagCls, verdict;
     if(pct >= 78){
       tag = '值'; tagCls = 'ok';
-      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元。这笔钱花得成立：单价压得住，往后几年也不会因为用旧就不值。';
+      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元，' + shareTxt + '。这笔钱花得成立：单价压得住，往后几年也不会因为用旧就不值。';
     } else if(pct >= 60){
       tag = '有条件值'; tagCls = 'mid';
-      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元。卡在线上，问题不在贵，在你用不满它的周期。';
+      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元，' + shareTxt + '。卡在线上，问题不在贵，在你用不满它的周期。';
     } else {
       tag = '不值'; tagCls = 'no';
-      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元。按现在的价格和使用周期，这笔钱买不回等价的东西。';
+      verdict = '值不值 ' + pct + '%，折合每天 ' + daily + ' 元，' + shareTxt + '。按这笔钱在生活费里的分量，它买不回等价的东西。';
     }
-    return {rows: rows, labels: labels, pct: pct, daily: daily, verdict: verdict, tag: tag, tagCls: tagCls};
+    return {rows: rows, labels: labels, pct: pct, daily: daily, ratio: ratio, share: share,
+            shareShort: shareShort, verdict: verdict, tag: tag, tagCls: tagCls};
   }
 
   document.getElementById('vGo').onclick = function(){
@@ -1503,18 +1514,20 @@
       '<div class="vscore"><span class="vnum">' + res.pct + '<small>%</small></span>' +
       '<span class="vbar2"><i style="width:' + res.pct + '%"></i></span>' +
       '<span class="vtag ' + res.tagCls + '">' + res.tag + '</span></div>' +
-      '<div class="vhead">' + (brand ? brand + ' ' : '') + name + ' · ' + price + ' 元 · 计划用 ' + years + ' 年</div>' +
+      '<div class="vhead">' + (brand ? brand + ' ' : '') + name + ' · ' + price + ' 元 · 计划用 ' + years + ' 年' +
+      ' · ' + res.shareShort + '</div>' +
       '<div class="vgrid"><div class="vh">学年</div><div class="vh">使用价值</div>' +
       '<div class="vh">交换价值</div><div class="vh">情绪价值</div>' + rows + '</div>' +
       '<div class="vfoot">' + res.verdict + '</div></div>';
     msgList.appendChild(d);
     scrollDown();
     lastVal = {brand: brand, name: name, price: price, years: years, extra: extra,
-               pct: res.pct, tag: res.tag, rows: res.rows, labels: res.labels, daily: res.daily};
+               pct: res.pct, tag: res.tag, rows: res.rows, labels: res.labels,
+               daily: res.daily, share: res.share, ratio: res.ratio};
     history.push({role:'user', content:'想买' + (brand ? '「' + brand + '」' : '') + '「' + name + '」，' + price + ' 元，预期用 ' + years + ' 年' +
-      (extra ? '，另外觉得它能带来：' + extra : '') + '。系统判定值不值 ' + res.pct + '%，折合每天 ' + res.daily + ' 元。'});
+      (extra ? '，另外觉得它能带来：' + extra : '') + '。这笔钱占我每月生活费（' + profile.money + ' 元）的 ' + res.share + '%，系统判定值不值 ' + res.pct + '%，折合每天 ' + res.daily + ' 元。'});
     if(history.length > 16) history = history.slice(-16);
-    reply('（内部）用户在上一张卡片里已经看到百分比结论。不要含糊，不要出现「看情况」「用得多就值」这类话，直接给一段分析，讲四件事：这件东西本身的价值；和市面上同类比，它的优势与短板各是什么；往后几年会怎么损耗、贬值或变化；最后一句明确结论——到底值不值、如果要买该买哪个方向。价格、每天成本这些卡片上已有的数字不要再重复，不要开场客套，控制在四句话以内。');
+    reply('（内部）用户在上一张卡片里已经看到百分比结论。不要含糊，不要出现「看情况」「用得多就值」这类话，直接给一段分析，讲四件事：这件东西本身的价值；和市面上同类比，它的优势与短板各是什么；往后几年会怎么损耗、贬值或变化；最后一句明确结论。结论必须扣住这笔钱占他月生活费的比例——占比越大越要说得狠，超过一个月生活费的直接劝阻。价格、每天成本这些卡片上已有的数字不要再重复，不要开场客套，控制在四句话以内。');
   };
 
   renderProfileBtn();
